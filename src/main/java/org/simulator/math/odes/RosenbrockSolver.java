@@ -25,9 +25,11 @@
 package org.simulator.math.odes;
 
 import org.apache.commons.math.ode.DerivativeException;
+import org.ejml.data.DMatrixRMaj;
+import org.ejml.dense.row.factory.LinearSolverFactory_DDRM;
+import org.ejml.interfaces.linsol.LinearSolverDense;
+import org.ejml.simple.SimpleMatrix;
 import org.simulator.math.Mathematics;
-import org.simulator.math.MatrixOperations;
-import org.simulator.math.MatrixOperations.MatrixException;
 
 /**
  * An implementation of Rosenbrock's method to approximate ODE solutions.
@@ -323,12 +325,25 @@ public class RosenbrockSolver extends AdaptiveStepsizeIntegrator {
     for (int i = 0; i < numEqn; i++) {
       k1[i] = f1[i] + DFDX[i] * h * d1;
     }
-    try {
-      MatrixOperations.ludcmp(FAC, indx);
-    } catch (MatrixException e) {
+
+//    try {
+//      MatrixOperations.ludcmp(FAC, indx);
+//    } catch (MatrixException e) {
+//      throw new DerivativeException("Rosenbrock solver returns an error due to singular matrix.");
+//    }
+//    MatrixOperations.lubksb(FAC, indx, k1);
+    DMatrixRMaj m_FAC = new DMatrixRMaj(FAC);
+    LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.lu(numEqn);
+    if (!solver.setA(m_FAC)) {
       throw new DerivativeException("Rosenbrock solver returns an error due to singular matrix.");
     }
-    MatrixOperations.lubksb(FAC, indx, k1);
+    
+    {
+      DMatrixRMaj tmp = new DMatrixRMaj(k1);
+      solver.solve(tmp, tmp);
+      System.arraycopy(tmp.data, 0, k1, 0, tmp.data.length); 
+    }
+    
     for (int i = 0; i < numEqn; i++) {
       yTemp[i] = y[i] + k1[i] * a21;
     }
@@ -336,7 +351,13 @@ public class RosenbrockSolver extends AdaptiveStepsizeIntegrator {
     for (int i = 0; i < numEqn; i++) {
       k2[i] = f2[i] + DFDX[i] * h * d2 + k1[i] * c21 / h;
     }
-    MatrixOperations.lubksb(FAC, indx, k2);
+//    MatrixOperations.lubksb(FAC, indx, k2);
+    {
+      DMatrixRMaj tmp = new DMatrixRMaj(k2);
+      solver.solve(tmp, tmp);
+      System.arraycopy(tmp.data, 0, k2, 0, tmp.data.length);
+    }
+    
     for (int i = 0; i < numEqn; i++) {
       yTemp[i] = y[i] + k1[i] * a31 + k2[i] * a32;
     }
@@ -344,7 +365,12 @@ public class RosenbrockSolver extends AdaptiveStepsizeIntegrator {
     for (int i = 0; i < numEqn; i++) {
       k3[i] = f3[i] + DFDX[i] * h * d3 + k1[i] * c31 / h + k2[i] * c32 / h;
     }
-    MatrixOperations.lubksb(FAC, indx, k3);
+//    MatrixOperations.lubksb(FAC, indx, k3);
+    {
+      DMatrixRMaj tmp = new DMatrixRMaj(k3);
+      solver.solve(tmp, tmp);
+      System.arraycopy(tmp.data, 0, k3, 0, tmp.data.length);
+    }
     for (int i = 0; i < numEqn; i++) {
       yTemp[i] = y[i] + k1[i] * a41 + k2[i] * a42 + k3[i] * a43;
     }
@@ -352,7 +378,12 @@ public class RosenbrockSolver extends AdaptiveStepsizeIntegrator {
     for (int i = 0; i < numEqn; i++) {
       k4[i] = f4[i] + DFDX[i] * h * d4 + k1[i] * c41 / h + k2[i] * c42 / h + k3[i] * c43 / h;
     }
-    MatrixOperations.lubksb(FAC, indx, k4);
+//    MatrixOperations.lubksb(FAC, indx, k4);
+    {
+      DMatrixRMaj tmp = new DMatrixRMaj(k4);
+      solver.solve(tmp, tmp);
+      System.arraycopy(tmp.data, 0, k4, 0, tmp.data.length);
+    }
     for (int i = 0; i < numEqn; i++) {
       yTemp[i] = y[i] + k1[i] * a51 + k2[i] * a52 + k3[i] * a53 + k4[i] * a54;
     }
@@ -360,7 +391,12 @@ public class RosenbrockSolver extends AdaptiveStepsizeIntegrator {
     for (int i = 0; i < numEqn; i++) {
       k5[i] = f5[i] + k1[i] * c51 / h + k2[i] * c52 / h + k3[i] * c53 / h + k4[i] * c54 / h;
     }
-    MatrixOperations.lubksb(FAC, indx, k5);
+//    MatrixOperations.lubksb(FAC, indx, k5);
+    {
+      DMatrixRMaj tmp = new DMatrixRMaj(k5);
+      solver.solve(tmp, tmp);
+      System.arraycopy(tmp.data, 0, k5, 0, tmp.data.length);
+    }
     for (int i = 0; i < numEqn; i++) {
       yTemp[i] += k5[i];
     }
@@ -369,7 +405,12 @@ public class RosenbrockSolver extends AdaptiveStepsizeIntegrator {
       yerr[i] = f6[i] + k1[i] * c61 / h + k2[i] * c62 / h + k3[i] * c63 / h + k4[i] * c64 / h
           + k5[i] * c65 / h;
     }
-    MatrixOperations.lubksb(FAC, indx, yerr);
+//    MatrixOperations.lubksb(FAC, indx, yerr);
+    {
+      DMatrixRMaj tmp = new DMatrixRMaj(yerr);
+      solver.solve(tmp, tmp);
+      System.arraycopy(tmp.data, 0, yerr, 0, tmp.data.length);
+    }
     for (int i = 0; i < numEqn; i++) {
       yNew[i] = yTemp[i] + yerr[i];
     }
